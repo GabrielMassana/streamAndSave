@@ -14,6 +14,18 @@ class ViewController: UIViewController {
     
     //MARK: - Accessors
     
+    private var context = 0
+
+    lazy var spinnerView: SpinnerView = {
+       
+        var spinnerView = SpinnerView()
+        
+        spinnerView.frame = UIScreen.mainScreen().bounds
+        spinnerView.spinner.center = self.view.center
+
+        return spinnerView
+    }()
+    
     lazy var player: AVPlayer = {
         
         var player: AVPlayer = AVPlayer(playerItem: self.playerItem)
@@ -56,6 +68,15 @@ class ViewController: UIViewController {
         return url!
     }()
     
+    //MARK: - Init
+
+    required init?(coder aDecoder: NSCoder) {
+        
+        super.init(coder:aDecoder)
+        
+        playerItem.addObserver(self, forKeyPath: "status", options: .New, context: &context)
+    }
+    
     //MARK: - ViewLifeCycle
 
     override func viewDidLoad() {
@@ -65,8 +86,42 @@ class ViewController: UIViewController {
         NSNotificationCenter.defaultCenter().addObserver(self, selector: #selector(playerItemDidReachEnd(_:)), name: AVPlayerItemDidPlayToEndTimeNotification, object: nil)
 
         view.layer.addSublayer(playerLayer)
-        
+        view.addSubview(spinnerView)
+
         player.play()
+    }
+    
+    //MARK: - KVO
+    
+    override func observeValueForKeyPath(keyPath: String?, ofObject object: AnyObject?, change: [String : AnyObject]?, context: UnsafeMutablePointer<Void>) {
+        
+        if context == &self.context {
+            
+            if let object = object {
+                
+                if object.isKindOfClass(AVPlayerItem.self) {
+                    
+                    let item = object as! AVPlayerItem
+                    
+                    switch item.status {
+                        
+                    case .Failed:
+                        
+                        print("Failed")
+                        
+                    case .ReadyToPlay:
+                        
+                        print("ReadyToPlay")
+                        
+                        spinnerView.removeFromSuperview()
+                        
+                    case .Unknown:
+                        
+                        print("Unknown")
+                    }
+                }
+            }
+        }
     }
     
     //MARK: - Notifications
@@ -105,6 +160,8 @@ class ViewController: UIViewController {
     deinit {
         
         NSNotificationCenter.defaultCenter().removeObserver(self)
+        
+        playerItem.removeObserver(self, forKeyPath: "status", context: &context)
     }
 }
 
