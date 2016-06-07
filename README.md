@@ -2,7 +2,7 @@
 
 Example of how to stream and play a video while downloading with AVURLAsset and save the buffer to disk.
 
-## Requirements
+## [Requirements](https://github.com/GabrielMassana/streamAndSave/releases/tag/1.0.0)
 
 - Play a video with AVPlayer.
 - Play the video while downloading it.
