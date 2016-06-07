@@ -68,6 +68,20 @@ class ViewController: UIViewController {
         return url!
     }()
     
+    lazy var resumeButton: UIButton = {
+       
+        var resumeButton = UIButton(type: .Custom)
+        
+        resumeButton.frame = CGRectMake(0, 20, CGRectGetWidth(UIScreen.mainScreen().bounds), 70)
+        resumeButton.setTitle("Resume Play", forState: .Normal)
+        resumeButton.setTitleColor(UIColor.blackColor(), forState: .Normal)
+        resumeButton.addTarget(self, action: #selector(resumeButtonPressed), forControlEvents: .TouchUpInside)
+        resumeButton.hidden = true
+        resumeButton.backgroundColor = UIColor.lightGrayColor()
+        
+        return resumeButton
+    }()
+    
     //MARK: - Init
 
     required init?(coder aDecoder: NSCoder) {
@@ -75,6 +89,9 @@ class ViewController: UIViewController {
         super.init(coder:aDecoder)
         
         playerItem.addObserver(self, forKeyPath: "status", options: .New, context: &context)
+        
+        NSNotificationCenter.defaultCenter().addObserver(self, selector: #selector(playerItemDidReachEnd(_:)), name: AVPlayerItemDidPlayToEndTimeNotification, object: nil)
+        NSNotificationCenter.defaultCenter().addObserver(self, selector: #selector(playerItemPlaybackStalled(_:)), name: AVPlayerItemPlaybackStalledNotification, object: nil)
     }
     
     //MARK: - ViewLifeCycle
@@ -83,11 +100,19 @@ class ViewController: UIViewController {
         
         super.viewDidLoad()
 
-        NSNotificationCenter.defaultCenter().addObserver(self, selector: #selector(playerItemDidReachEnd(_:)), name: AVPlayerItemDidPlayToEndTimeNotification, object: nil)
-
         view.layer.addSublayer(playerLayer)
         view.addSubview(spinnerView)
+        view.addSubview(resumeButton)
 
+        player.play()
+    }
+    
+    //MARK: - ButtonActions
+    
+    func resumeButtonPressed() {
+        
+        resumeButton.hidden = true
+        
         player.play()
     }
     
@@ -107,17 +132,15 @@ class ViewController: UIViewController {
                         
                     case .Failed:
                         
-                        print("Failed")
+                        ()
                         
                     case .ReadyToPlay:
-                        
-                        print("ReadyToPlay")
                         
                         spinnerView.removeFromSuperview()
                         
                     case .Unknown:
                         
-                        print("Unknown")
+                        ()
                     }
                 }
             }
@@ -153,6 +176,13 @@ class ViewController: UIViewController {
                 print(exporter?.error)
             })
         }
+    }
+    
+    func playerItemPlaybackStalled(notification: NSNotification) {
+        
+        player.pause()
+        
+        resumeButton.hidden = false
     }
     
     //MARK: - Deinit
