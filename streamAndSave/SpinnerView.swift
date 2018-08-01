@@ -14,7 +14,7 @@ class SpinnerView: UIView {
 
     lazy var spinner: UIActivityIndicatorView = {
        
-        var spinner = UIActivityIndicatorView(activityIndicatorStyle: .Gray)
+        var spinner = UIActivityIndicatorView(activityIndicatorStyle: .gray)
         
         spinner.startAnimating()
         
@@ -27,7 +27,7 @@ class SpinnerView: UIView {
         
         super.init(frame: frame)
         
-        backgroundColor = UIColor.whiteColor()
+        backgroundColor = UIColor.white
         
         addSubview(spinner)
     }
