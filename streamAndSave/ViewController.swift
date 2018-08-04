@@ -15,7 +15,8 @@ class ViewController: UIViewController {
     //MARK: - Accessors
     
     private var context = 0
-
+    private var fileSaved:Bool = false;
+    
     lazy var spinnerView: SpinnerView = {
         var spinnerView = SpinnerView()
         spinnerView.frame = UIScreen.main.bounds
@@ -48,10 +49,10 @@ class ViewController: UIViewController {
     }()
     
     var url: NSURL = {
-        
-        var url = NSURL(string: "https://clips.vorwaerts-gmbh.de/big_buck_bunny.mp4")
+        var mediaUrl = "https://s3.us-east-2.amazonaws.com/marbyl/VISUALS/Sailboat_Wheel_with_Flags.mp4"
+        var url = NSURL(string: mediaUrl)
         return url!
-        
+        //"https://clips.vorwaerts-gmbh.de/big_buck_bunny.mp4"
     }()
     
     lazy var resumeButton: UIButton = {
@@ -137,12 +138,16 @@ class ViewController: UIViewController {
             player.play()
             
             /*--------------------*/
-            let exporter = AVAssetExportSession(asset: asset, presetName: AVAssetExportPresetHighestQuality)
             let filename = self.url.lastPathComponent
             
             let documentsDirectory = getDocumentsDirectory()
             let outputURL = documentsDirectory.appendingPathComponent(filename!)
+            if FileManager.default.fileExists(atPath: outputURL.path) {
+                print("file exists \(outputURL.path)")
+                return
+            }
             
+            let exporter = AVAssetExportSession(asset: asset, presetName: AVAssetExportPresetHighestQuality)
             exporter?.outputURL = outputURL
             exporter?.outputFileType = AVFileType.mp4
             
@@ -150,6 +155,8 @@ class ViewController: UIViewController {
                 
                 print(exporter?.status.rawValue ?? 0)
                 print(exporter?.error ?? "no error, file saved sucessfully to \(outputURL)")
+                self.fileSaved = (exporter?.status == AVAssetExportSessionStatus.completed)
+                NotificationCenter.default.removeObserver(self) // no need to keep this observer after file was saved.
             })
         }
     }
