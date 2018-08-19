@@ -7,7 +7,7 @@
 //
 
 import UIKit
-
+import AVKit
 import AVFoundation
 
 class ViewController: UIViewController {
@@ -15,87 +15,73 @@ class ViewController: UIViewController {
     //MARK: - Accessors
     
     private var context = 0
-
+    private var fileSaved:Bool = false;
+    
     lazy var spinnerView: SpinnerView = {
-       
         var spinnerView = SpinnerView()
-        
-        spinnerView.frame = UIScreen.mainScreen().bounds
+        spinnerView.frame = UIScreen.main.bounds
         spinnerView.spinner.center = self.view.center
-
         return spinnerView
     }()
     
     lazy var player: AVPlayer = {
-        
         var player: AVPlayer = AVPlayer(playerItem: self.playerItem)
-        
-        player.actionAtItemEnd = AVPlayerActionAtItemEnd.None
-        
+        player.actionAtItemEnd = AVPlayerActionAtItemEnd.none
         return player
     }()
     
     lazy var playerItem: AVPlayerItem = {
-        
         var playerItem: AVPlayerItem = AVPlayerItem(asset: self.asset)
-        
         return playerItem
     }()
     
     lazy var asset: AVURLAsset = {
-        
-        var asset: AVURLAsset = AVURLAsset(URL: self.url)
-        
-        asset.resourceLoader.setDelegate(self, queue: dispatch_get_main_queue())
-        
+        var asset: AVURLAsset = AVURLAsset(url: self.url as URL)
+        asset.resourceLoader.setDelegate(self, queue: DispatchQueue.main)
         return asset
     }()
     
     lazy var playerLayer: AVPlayerLayer = {
-        
         var playerLayer: AVPlayerLayer = AVPlayerLayer(player: self.player)
-        
-        playerLayer.frame = UIScreen.mainScreen().bounds
-        playerLayer.backgroundColor = UIColor.clearColor().CGColor
-        
+        playerLayer.frame = UIScreen.main.bounds
+        playerLayer.backgroundColor = UIColor.clear.cgColor
         return playerLayer
     }()
     
     var url: NSURL = {
-        
-        var url = NSURL(string: "https://clips.vorwaerts-gmbh.de/big_buck_bunny.mp4")
-        
+        var mediaUrl = "https://s3.us-east-2.amazonaws.com/marbyl/VISUALS/Sailboat_Wheel_with_Flags.mp4"
+        var url = NSURL(string: mediaUrl)
         return url!
+        //"https://clips.vorwaerts-gmbh.de/big_buck_bunny.mp4"
     }()
     
     lazy var resumeButton: UIButton = {
        
-        var resumeButton = UIButton(type: .Custom)
+        var resumeButton = UIButton(type: .custom)
         
-        resumeButton.frame = CGRectMake(0, 20, CGRectGetWidth(UIScreen.mainScreen().bounds), 70)
-        resumeButton.setTitle("Resume Play", forState: .Normal)
-        resumeButton.setTitleColor(UIColor.blackColor(), forState: .Normal)
-        resumeButton.addTarget(self, action: #selector(resumeButtonPressed), forControlEvents: .TouchUpInside)
-        resumeButton.hidden = true
-        resumeButton.backgroundColor = UIColor.lightGrayColor()
+        resumeButton.frame = CGRect(x:0, y:20, width:UIScreen.main.bounds.width, height:70)
+        resumeButton.setTitle("Resume Play", for: .normal)
+        resumeButton.setTitleColor(UIColor.black, for: .normal)
+        resumeButton.addTarget(self, action: #selector(resumeButtonPressed), for: .touchUpInside)
+        resumeButton.isHidden = true
+        resumeButton.backgroundColor = UIColor.lightGray
         
         return resumeButton
     }()
     
     //MARK: - Init
-
     required init?(coder aDecoder: NSCoder) {
         
         super.init(coder:aDecoder)
         
-        playerItem.addObserver(self, forKeyPath: "status", options: .New, context: &context)
+        playerItem.addObserver(self, forKeyPath: "status", options: .new, context: &context)
         
-        NSNotificationCenter.defaultCenter().addObserver(self, selector: #selector(playerItemDidReachEnd(_:)), name: AVPlayerItemDidPlayToEndTimeNotification, object: nil)
-        NSNotificationCenter.defaultCenter().addObserver(self, selector: #selector(playerItemPlaybackStalled(_:)), name: AVPlayerItemPlaybackStalledNotification, object: nil)
+        NotificationCenter.default.addObserver(self, selector: #selector(playerItemDidReachEnd), name: .AVPlayerItemDidPlayToEndTime, object: nil)
+        NotificationCenter.default.addObserver(self, selector: #selector(playerItemPlaybackStalled), name: .AVPlayerItemPlaybackStalled, object: nil)
+
     }
     
     //MARK: - ViewLifeCycle
-
     override func viewDidLoad() {
         
         super.viewDidLoad()
@@ -103,94 +89,88 @@ class ViewController: UIViewController {
         view.layer.addSublayer(playerLayer)
         view.addSubview(spinnerView)
         view.addSubview(resumeButton)
-
         player.play()
+        
     }
     
     //MARK: - ButtonActions
-    
-    func resumeButtonPressed() {
-        
-        resumeButton.hidden = true
-        
+    @objc func resumeButtonPressed() {
+        resumeButton.isHidden = true
         player.play()
     }
     
-    //MARK: - KVO
-    
-    override func observeValueForKeyPath(keyPath: String?, ofObject object: AnyObject?, change: [String : AnyObject]?, context: UnsafeMutablePointer<Void>) {
-        
-        if context == &self.context {
-            
-            if let object = object {
+    override func observeValue(forKeyPath keyPath: String?, of object: Any?, change: [NSKeyValueChangeKey : Any]?, context: UnsafeMutableRawPointer?) {
+        if let key = keyPath {
+            if key == "status" {
+                if self.playerItem == (object as? AVPlayerItem) {
                 
-                if object.isKindOfClass(AVPlayerItem.self) {
-                    
                     let item = object as! AVPlayerItem
-                    
                     switch item.status {
                         
-                    case .Failed:
-                        
+                    case .failed:
                         ()
                         
-                    case .ReadyToPlay:
-                        
+                    case .readyToPlay:
                         spinnerView.removeFromSuperview()
                         
-                    case .Unknown:
-                        
+                    case .unknown:
                         ()
+                        
                     }
                 }
             }
         }
     }
     
+    func getDocumentsDirectory() -> URL {
+        let paths = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)
+        let documentsDirectory = paths[0]
+        return documentsDirectory
+    }
+    
     //MARK: - Notifications
-
-    func playerItemDidReachEnd(notification: NSNotification) {
+    @objc func playerItemDidReachEnd(notification: NSNotification) {
         
         if notification.object as? AVPlayerItem  == player.currentItem {
             
             player.pause()
-            player.seekToTime(kCMTimeZero)
+            player.seek(to: kCMTimeZero)
             player.play()
             
             /*--------------------*/
-
+            let filename = self.url.lastPathComponent
+            
+            let documentsDirectory = getDocumentsDirectory()
+            let outputURL = documentsDirectory.appendingPathComponent(filename!)
+            if FileManager.default.fileExists(atPath: outputURL.path) {
+                print("file exists \(outputURL.path)")
+                return
+            }
+            
             let exporter = AVAssetExportSession(asset: asset, presetName: AVAssetExportPresetHighestQuality)
-            
-            let filename = "filename.mp4"
-            
-            let documentsDirectory = NSFileManager.defaultManager().URLsForDirectory(NSSearchPathDirectory.DocumentDirectory, inDomains: NSSearchPathDomainMask.UserDomainMask).last!
-
-            let outputURL = documentsDirectory.URLByAppendingPathComponent(filename)
-            
             exporter?.outputURL = outputURL
-            exporter?.outputFileType = AVFileTypeMPEG4
+            exporter?.outputFileType = AVFileType.mp4
             
-            exporter?.exportAsynchronouslyWithCompletionHandler({
+            exporter?.exportAsynchronously(completionHandler: {
                 
-                print(exporter?.status.rawValue)
-                print(exporter?.error)
+                print(exporter?.status.rawValue ?? 0)
+                print(exporter?.error ?? "no error, file saved sucessfully to \(outputURL)")
+                self.fileSaved = (exporter?.status == AVAssetExportSessionStatus.completed)
+                NotificationCenter.default.removeObserver(self) // no need to keep this observer after file was saved.
             })
         }
     }
     
-    func playerItemPlaybackStalled(notification: NSNotification) {
-        
+    @objc func playerItemPlaybackStalled(notification: NSNotification) {
         player.pause()
-        
-        resumeButton.hidden = false
+        resumeButton.isHidden = false
     }
     
     //MARK: - Deinit
 
     deinit {
         
-        NSNotificationCenter.defaultCenter().removeObserver(self)
-        
+        NotificationCenter.default.removeObserver(self)
         playerItem.removeObserver(self, forKeyPath: "status", context: &context)
     }
 }
